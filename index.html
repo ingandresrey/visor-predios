@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Visor de Predios</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+  body { margin:0; font-family: Arial, sans-serif; }
+  #map { height:100vh; }
+
+  .titulo {
+    position:absolute;
+    top:10px;
+    left:50px;
+    z-index:1000;
+    background:white;
+    padding:8px 12px;
+    border-radius:8px;
+    font-weight:bold;
+    box-shadow:0 0 10px rgba(0,0,0,0.2);
+  }
+</style>
+</head>
+
+<body>
+
+<div class="titulo">Visor de Predios</div>
+<div id="map"></div>
+
+<script>
+
+// ===============================
+// CAPAS BASE
+// ===============================
+
+// Satelital (Esri)
+var esriSat = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: 'Tiles © Esri'
+  }
+);
+
+// Calles (OSM)
+var osm = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+);
+
+// ===============================
+// MAPA
+// ===============================
+
+var map = L.map('map', {
+  layers: [esriSat]
+});
+
+// Control de capas
+var baseMaps = {
+  "Satelital": esriSat,
+  "Calles": osm
+};
+
+L.control.layers(baseMaps).addTo(map);
+
+// ===============================
+// CARGAR GEOJSON
+// ===============================
+
+fetch('predios.geojson')
+.then(res => res.json())
+.then(data => {
+
+    var geo = L.geoJSON(data, {
+
+        style: {
+            color: "#ff7800",
+            weight: 2,
+            fillOpacity: 0.2
+        },
+
+        onEachFeature: function (feature, layer) {
+
+            // POPUP
+            layer.bindPopup(
+                "<b>Nombre:</b> " + (feature.properties.name || "N/A") + "<br>" +
+                "<b>Área:</b> " + (feature.properties.AREA_HA || feature.properties.SHAPE_Area || "N/A")
+            );
+
+            // ZOOM AL HACER CLICK
+            layer.on('click', function(e){
+                map.fitBounds(e.target.getBounds());
+            });
+
+            // EFECTO HOVER (resalta)
+            layer.on('mouseover', function (e) {
+                e.target.setStyle({
+                    weight: 4,
+                    color: '#00FFFF'
+                });
+            });
+
+            layer.on('mouseout', function (e) {
+                geo.resetStyle(e.target);
+            });
+        }
+
+    }).addTo(map);
+
+    // Ajustar vista inicial
+    map.fitBounds(geo.getBounds());
+
+});
+
+</script>
+
+</body>
+</html>
