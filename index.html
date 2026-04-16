@@ -38,15 +38,11 @@
 // CAPAS BASE
 // ===============================
 
-// Satelital (Esri)
 var esriSat = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  {
-    attribution: 'Tiles © Esri'
-  }
+  { attribution: 'Tiles © Esri' }
 );
 
-// Calles (OSM)
 var osm = L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 );
@@ -59,14 +55,6 @@ var map = L.map('map', {
   layers: [esriSat]
 });
 
-// Control de capas
-var baseMaps = {
-  "Satelital": esriSat,
-  "Calles": osm
-};
-
-L.control.layers(baseMaps).addTo(map);
-
 // ===============================
 // CARGAR GEOJSON
 // ===============================
@@ -75,7 +63,8 @@ fetch('predios.geojson')
 .then(res => res.json())
 .then(data => {
 
-    var geo = L.geoJSON(data, {
+    // Crear capa de predios
+    var prediosLayer = L.geoJSON(data, {
 
         style: {
             color: "#ff7800",
@@ -87,32 +76,46 @@ fetch('predios.geojson')
 
             // POPUP
             layer.bindPopup(
-                "<b>Nombre:</b> " + (feature.properties.name || "N/A") + "<br>" +
-                "<b>Área:</b> " + (feature.properties.AREA_HA || feature.properties.SHAPE_Area || "N/A")
+                "<b>Numero Predial:</b> " + (feature.properties.Numero_Pre || "N/A") + "<br>" +
+                "<b>Nombre:</b> " + (feature.properties.Direccion || "N/A") + "<br>" +
+                "<b>Área:</b> " + (feature.properties.Area ? feature.properties.Area.toFixed(2) : "N/A")
             );
 
-            // ZOOM AL HACER CLICK
+            // Zoom al hacer click
             layer.on('click', function(e){
                 map.fitBounds(e.target.getBounds());
             });
 
-            // EFECTO HOVER (resalta)
-            layer.on('mouseover', function (e) {
-                e.target.setStyle({
-                    weight: 4,
-                    color: '#00FFFF'
-                });
+            // Efecto hover (opcional pero pro)
+            layer.on('mouseover', function () {
+                layer.setStyle({ weight: 4, color: '#00FFFF' });
             });
 
-            layer.on('mouseout', function (e) {
-                geo.resetStyle(e.target);
+            layer.on('mouseout', function () {
+                prediosLayer.resetStyle(layer);
             });
+
         }
 
     }).addTo(map);
 
     // Ajustar vista inicial
-    map.fitBounds(geo.getBounds());
+    map.fitBounds(prediosLayer.getBounds());
+
+    // ===============================
+    // CONTROL DE CAPAS
+    // ===============================
+
+    var baseMaps = {
+        "Satelital": esriSat,
+        "Calles": osm
+    };
+
+    var overlayMaps = {
+        "Predios": prediosLayer
+    };
+
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 });
 
